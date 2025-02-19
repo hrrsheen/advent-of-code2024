@@ -22,7 +22,7 @@ func InBounds(x int, y int, grid *Grid) bool {
 }
 
 /**
-* Recursively searches for the remainder of the word "XMAS" by looking in the given direction.
+ * Recursively searches for the remainder of the word "XMAS" by looking in the given direction.
  */
 func SearchNext(x int, y int, xdir int, ydir int, prev rune, grid *Grid) int {
 	if !InBounds(x+xdir, y+ydir, grid) {
@@ -62,8 +62,8 @@ func Search(x int, y int, grid *Grid) int {
 }
 
 /**
-* Assuming that the point at (x, y) contains an 'A'. Check the diagonally-adjacent cells for
-* instances of the word "MAS". Returns the number of times it occurs
+ * Assuming that the point at (x, y) contains an 'A'. Check the diagonally-adjacent cells for
+ * instances of the word "MAS". Returns the number of times it occurs
  */
 func CheckMAS(x int, y int, grid *Grid) int {
 	if grid.contents[ToIndex(x, y, grid)] != 'A' {
