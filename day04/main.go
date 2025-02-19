@@ -13,32 +13,17 @@ type Grid struct {
 	height   int
 }
 
-func NewGrid(width int, height int) Grid {
-	grid := Grid{width: width, height: height}
-	grid.contents = make([]rune, width*height)
-
-	return grid
-}
-
-func NewKernel(width int, height int, filter []rune) Grid {
-	grid := NewGrid(width, height)
-	grid.contents = filter
-
-	return grid
-}
-
 func ToIndex(x int, y int, grid *Grid) int {
 	return y*grid.width + x
-}
-
-func ToCoords(index int, grid *Grid) (int, int) {
-	return index % grid.width, index / grid.width
 }
 
 func InBounds(x int, y int, grid *Grid) bool {
 	return x >= 0 && x < grid.width && y >= 0 && y < grid.height
 }
 
+/**
+* Recursively searches for the remainder of the word "XMAS" by looking in the given direction.
+ */
 func SearchNext(x int, y int, xdir int, ydir int, prev rune, grid *Grid) int {
 	if !InBounds(x+xdir, y+ydir, grid) {
 		return 0
@@ -62,6 +47,7 @@ func Search(x int, y int, grid *Grid) int {
 
 	count := 0
 	if character == 'X' {
+		// An "XMAS" may appear in any of the 8 directions, outwardly from the 'X'.
 		count += SearchNext(x, y, 1, 0, 'X', grid)
 		count += SearchNext(x, y, 0, 1, 'X', grid)
 		count += SearchNext(x, y, 1, 1, 'X', grid)
@@ -75,11 +61,49 @@ func Search(x int, y int, grid *Grid) int {
 	return count
 }
 
+/**
+* Assuming that the point at (x, y) contains an 'A'. Check the diagonally-adjacent cells for
+* instances of the word "MAS". Returns the number of times it occurs
+ */
+func CheckMAS(x int, y int, grid *Grid) int {
+	if grid.contents[ToIndex(x, y, grid)] != 'A' {
+		return 0
+	}
+
+	above := grid.contents[ToIndex(x-1, y-1, grid)]
+	below := grid.contents[ToIndex(x+1, y+1, grid)]
+
+	if !((above == 'M' && below == 'S') || (above == 'S' && below == 'M')) {
+		return 0
+	}
+
+	above = grid.contents[ToIndex(x+1, y-1, grid)]
+	below = grid.contents[ToIndex(x-1, y+1, grid)]
+
+	if (above == 'M' && below == 'S') || (above == 'S' && below == 'M') {
+		return 1
+	}
+
+	return 0
+}
+
 func SearchGrid(grid *Grid) int {
+	// By changing these variables and the SearchFunc, I can easily switch between
+	// the words I'm searching for.
+	var (
+		xStart int = 1
+		xEnd   int = grid.width - 1
+		yStart int = 1
+		yEnd   int = grid.height - 1
+	)
+
+	SearchFunc := CheckMAS
+
 	numFound := 0
-	for i := 0; i < grid.width*grid.height; i++ {
-		x, y := ToCoords(i, grid)
-		numFound += Search(x, y, grid)
+	for y := yStart; y < yEnd; y++ {
+		for x := xStart; x < xEnd; x++ {
+			numFound += SearchFunc(x, y, grid)
+		}
 	}
 
 	return numFound
@@ -108,6 +132,7 @@ func PopulateGridFromReader(r *bufio.Reader) Grid {
 		}
 
 		grid.contents = append(grid.contents, ch)
+		// Once the grid's width is locked in, we don't need to keep track of the character count.
 		if width == 0 {
 			chCount++
 		}
