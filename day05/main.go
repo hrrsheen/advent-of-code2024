@@ -9,14 +9,14 @@ import (
 	"strings"
 )
 
-func ValidateUpdate(pages []string, rules *map[string][]string) bool {
+func ValidateUpdate(pages []string, rules *map[string]map[string]bool) bool {
 	updated := make(map[string]bool)
 
 	for _, page := range pages {
 		updated[page] = true
 		// If a page in the corresponding rules already has an entry in "updates", then it clearly has been updated
 		// before the current page. Thus, the update as a whole is invalid.
-		for _, rule := range (*rules)[page] {
+		for rule := range (*rules)[page] {
 			if updated[rule] {
 				return false
 			}
@@ -26,11 +26,11 @@ func ValidateUpdate(pages []string, rules *map[string][]string) bool {
 	return true
 }
 
-func FixUpdate(pages []string, rules *map[string][]string) []string {
+func FixUpdate(pages []string, rules *map[string]map[string]bool) []string {
 	CompareFn := func(a string, b string) int {
-		if slices.Contains[[]string]((*rules)[a], b) {
+		if (*rules)[a][b] {
 			return -1
-		} else if slices.Contains[[]string]((*rules)[b], a) {
+		} else if (*rules)[b][a] {
 			return 1
 		}
 		return 0
@@ -51,11 +51,14 @@ func main() {
 	matchRules, _ := regexp.Compile(`(\d{2})\|(\d{2})`)
 	ruleStrings := matchRules.FindAllStringSubmatch(contents, -1)
 
-	rules := make(map[string][]string)
+	rules := make(map[string]map[string]bool)
 	for _, match := range ruleStrings {
 		before := match[1]
 		after := match[2]
-		rules[before] = append(rules[before], after)
+		if rules[before] == nil {
+			rules[before] = make(map[string]bool)
+		}
+		rules[before][after] = true
 	}
 
 	matchUpdates, _ := regexp.Compile(`((?:,?\d{2}){2,})`)
