@@ -13,11 +13,11 @@ type Grid struct {
 	height   int
 }
 
-func ToIndex(x int, y int, grid *Grid) int {
+func (grid *Grid) ToIndex(x int, y int) int {
 	return y*grid.width + x
 }
 
-func InBounds(x int, y int, grid *Grid) bool {
+func (grid *Grid) InBounds(x int, y int) bool {
 	return x >= 0 && x < grid.width && y >= 0 && y < grid.height
 }
 
@@ -25,11 +25,11 @@ func InBounds(x int, y int, grid *Grid) bool {
  * Recursively searches for the remainder of the word "XMAS" by looking in the given direction.
  */
 func SearchNext(x int, y int, xdir int, ydir int, prev rune, grid *Grid) int {
-	if !InBounds(x+xdir, y+ydir, grid) {
+	if !grid.InBounds(x+xdir, y+ydir) {
 		return 0
 	}
 
-	index := ToIndex(x+xdir, y+ydir, grid)
+	index := grid.ToIndex(x+xdir, y+ydir)
 	character := grid.contents[index]
 	if (character == 'M' && prev == 'X') || (character == 'A' && prev == 'M') {
 		return SearchNext(x+xdir, y+ydir, xdir, ydir, character, grid)
@@ -43,7 +43,7 @@ func SearchNext(x int, y int, xdir int, ydir int, prev rune, grid *Grid) int {
 }
 
 func Search(x int, y int, grid *Grid) int {
-	character := grid.contents[ToIndex(x, y, grid)]
+	character := grid.contents[grid.ToIndex(x, y)]
 
 	count := 0
 	if character == 'X' {
@@ -66,19 +66,19 @@ func Search(x int, y int, grid *Grid) int {
  * instances of the word "MAS". Returns the number of times it occurs
  */
 func CheckMAS(x int, y int, grid *Grid) int {
-	if grid.contents[ToIndex(x, y, grid)] != 'A' {
+	if grid.contents[grid.ToIndex(x, y)] != 'A' {
 		return 0
 	}
 
-	above := grid.contents[ToIndex(x-1, y-1, grid)]
-	below := grid.contents[ToIndex(x+1, y+1, grid)]
+	above := grid.contents[grid.ToIndex(x-1, y-1)]
+	below := grid.contents[grid.ToIndex(x+1, y+1)]
 
 	if !((above == 'M' && below == 'S') || (above == 'S' && below == 'M')) {
 		return 0
 	}
 
-	above = grid.contents[ToIndex(x+1, y-1, grid)]
-	below = grid.contents[ToIndex(x-1, y+1, grid)]
+	above = grid.contents[grid.ToIndex(x+1, y-1)]
+	below = grid.contents[grid.ToIndex(x-1, y+1)]
 
 	if (above == 'M' && below == 'S') || (above == 'S' && below == 'M') {
 		return 1
