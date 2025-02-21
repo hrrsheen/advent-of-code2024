@@ -78,12 +78,6 @@ func PopulateFileSystem(r *bufio.Reader) FileSystem {
 }
 
 func MoveFile(left *FileNode, right *FileNode, fileSys *FileSystem) {
-	if left.next == right {
-		right.freeSpace += left.freeSpace
-		left.freeSpace = 0
-		return
-	}
-
 	// Create a new node to represent the right-most file moving to the next free space.
 	newAddress := left.address + left.length
 	movedFile := NewFileNode(newAddress, right.id, right.length, left.freeSpace-right.length)
