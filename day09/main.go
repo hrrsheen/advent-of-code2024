@@ -7,33 +7,34 @@ import (
 	"os"
 )
 
-type Node struct {
+type FileNode struct {
+	address   int
 	id        int
 	length    int
 	freeSpace int
-	next      *Node
-	prev      *Node
+	next      *FileNode
+	prev      *FileNode
 }
 
 type FileSystem struct {
-	start *Node
-	end   *Node
+	start *FileNode
+	end   *FileNode
 	size  int
 }
 
-func NewNode(id int, length int, freeSpace int) *Node {
-	node := Node{id: id, length: length, freeSpace: freeSpace, next: nil, prev: nil}
+func NewFileNode(address int, id int, length int, freeSpace int) *FileNode {
+	file := FileNode{address: address, id: id, length: length, freeSpace: freeSpace, next: nil, prev: nil}
 
-	return &node
+	return &file
 }
 
-func (list *FileSystem) Append(newNode *Node) {
+func (list *FileSystem) Append(newFileNode *FileNode) {
 	if list.end != nil {
-		list.end.next = newNode
+		list.end.next = newFileNode
 	}
 
-	newNode.prev = list.end
-	list.end = newNode
+	newFileNode.prev = list.end
+	list.end = newFileNode
 	if list.start == nil {
 		list.start = list.end
 	}
@@ -62,7 +63,7 @@ func PopulateFileSystem(r *bufio.Reader) FileSystem {
 
 		value := RuneToDigit(ch)
 		if toggle {
-			file := NewNode(id, value, 0)
+			file := NewFileNode(fileSystem.size, id, value, 0)
 			fileSystem.Append(file)
 		} else {
 			fileSystem.end.freeSpace = value
@@ -76,7 +77,7 @@ func PopulateFileSystem(r *bufio.Reader) FileSystem {
 	return fileSystem
 }
 
-func MoveFile(left *Node, right *Node, fileSys *FileSystem) {
+func MoveFile(left *FileNode, right *FileNode, fileSys *FileSystem) {
 	if left.next == right {
 		right.freeSpace += left.freeSpace
 		left.freeSpace = 0
@@ -84,7 +85,8 @@ func MoveFile(left *Node, right *Node, fileSys *FileSystem) {
 	}
 
 	// Create a new node to represent the right-most file moving to the next free space.
-	interspersed := NewNode(right.id, right.length, left.freeSpace-right.length)
+	newAddress := left.address + left.length + left.freeSpace
+	interspersed := NewFileNode(newAddress, right.id, right.length, left.freeSpace-right.length)
 
 	// Insert a copy of the right node into position after the left node.
 	interspersed.prev = left
@@ -110,7 +112,7 @@ func MoveFile(left *Node, right *Node, fileSys *FileSystem) {
 	}
 }
 
-func SeekFit(openFile *Node, toFit *Node) (*Node, bool) {
+func SeekFit(openFile *FileNode, toFit *FileNode) (*FileNode, bool) {
 	found := false
 	for openFile != toFit {
 		if openFile.freeSpace >= toFit.length {
@@ -123,48 +125,41 @@ func SeekFit(openFile *Node, toFit *Node) (*Node, bool) {
 	return openFile, found
 }
 
-func SeekFreeSpace(file *Node, freeSpace int) (*Node, int) {
-	seekDistance := 0
-	i := 0
+func SeekFreeSpace(file *FileNode, freeSpace int) *FileNode {
 	for file != nil && file.freeSpace < freeSpace {
-		if i > 0 {
-			seekDistance += file.length + file.freeSpace
-		}
 		file = file.next
-		i++
 	}
 
-	if i > 0 {
-		seekDistance += file.length
-	}
-
-	return file, seekDistance
+	return file
 }
 
 func Defrag(fileSystem FileSystem) {
-	leftmostSpace, seekDistance := SeekFreeSpace(fileSystem.start, 1)
-	endFile := fileSystem.end
+	firstSpace := SeekFreeSpace(fileSystem.start, 1) // The left-most file with any available space.
+	currentFile := fileSystem.end                    // The file that we're currently attempting to move.
+
 	cachedIDs := make(map[int]bool)
+	for firstSpace.address+firstSpace.length < currentFile.address {
+		// Ignore files that we've already moved.
+		if cachedIDs[currentFile.id] {
+			currentFile = currentFile.prev
+			continue
+		}
+		cachedIDs[currentFile.id] = true
 
-	leftPos := seekDistance
-	rightPos := fileSystem.size - (int(endFile.length + endFile.freeSpace))
-	for leftPos < rightPos {
-		openFile, found := SeekFit(leftmostSpace, endFile)
-		if found && !cachedIDs[endFile.id] {
-			MoveFile(openFile, endFile, &fileSystem)
-			leftmostSpace, seekDistance = SeekFreeSpace(leftmostSpace, 1)
-			leftPos += seekDistance
+		// Look for the first file with enough space for the current file.
+		openFile, found := SeekFit(firstSpace, currentFile)
+		if found {
+			MoveFile(openFile, currentFile, &fileSystem)
+			firstSpace = SeekFreeSpace(firstSpace, 1)
 		}
 
-		cachedIDs[endFile.id] = true
-		rightPos -= int(endFile.prev.length + endFile.prev.freeSpace)
-
-		if found && endFile.prev != openFile {
-			endFile.prev.freeSpace += endFile.length + endFile.freeSpace
+		// Ignore cases when the file is moved directly to the left-adjacent space.
+		if found && currentFile.prev != openFile {
+			// Update the free space of the file to the left of the moved file.
+			currentFile.prev.freeSpace += currentFile.length + currentFile.freeSpace
 		}
-		endFile = endFile.prev
+		currentFile = currentFile.prev
 	}
-	fmt.Printf("defragged\n")
 }
 
 func Sum(start int, end int) int {
@@ -208,6 +203,6 @@ func main() {
 	fileSystem := PopulateFileSystem(reader)
 	Defrag(fileSystem)
 
-	WriteListToFile(fileSystem, fmt.Sprintf("%s_defrag.txt", inputName))
+	// WriteListToFile(fileSystem, fmt.Sprintf("%s_defrag.txt", inputName))
 	fmt.Printf("Checksum: %d\n", CalculateChecksum(fileSystem))
 }
