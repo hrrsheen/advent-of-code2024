@@ -85,27 +85,30 @@ func MoveFile(left *FileNode, right *FileNode, fileSys *FileSystem) {
 	}
 
 	// Create a new node to represent the right-most file moving to the next free space.
-	newAddress := left.address + left.length + left.freeSpace
-	interspersed := NewFileNode(newAddress, right.id, right.length, left.freeSpace-right.length)
+	newAddress := left.address + left.length
+	movedFile := NewFileNode(newAddress, right.id, right.length, left.freeSpace-right.length)
 
 	// Insert a copy of the right node into position after the left node.
-	interspersed.prev = left
-	interspersed.next = left.next
-	left.next.prev = interspersed
-	left.next = interspersed
+	movedFile.prev = left
+	movedFile.next = left.next
+	left.next.prev = movedFile
+	left.next = movedFile
 
 	left.freeSpace = 0
 
-	// Sever the connection to the right node.
+	// Sever the connections to the right node.
+	right.prev.next = right.next
 	if right == fileSys.end {
 		fileSys.end = right.prev
-		fileSys.size -= (int(right.length + right.freeSpace))
+		fileSys.size -= (right.length + right.freeSpace)
 	}
-	right.prev.next = right.next
 	if right.next != nil {
 		right.next.prev = right.prev
 	}
-	// right.prev.freeSpace += right.length + right.freeSpace
+	// Update the left file with the newly added free space.
+	if right.prev != left {
+		right.prev.freeSpace += right.length + right.freeSpace
+	}
 
 	if right.length < 0 || fileSys.end.freeSpace < 0 {
 		panic("File size can't be negative.")
@@ -153,11 +156,6 @@ func Defrag(fileSystem FileSystem) {
 			firstSpace = SeekFreeSpace(firstSpace, 1)
 		}
 
-		// Ignore cases when the file is moved directly to the left-adjacent space.
-		if found && currentFile.prev != openFile {
-			// Update the free space of the file to the left of the moved file.
-			currentFile.prev.freeSpace += currentFile.length + currentFile.freeSpace
-		}
 		currentFile = currentFile.prev
 	}
 }
