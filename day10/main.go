@@ -99,8 +99,9 @@ func (mapData *Grid) Neighbours(point Vector) iter.Seq[Vector] {
 	}
 }
 
-func FindPaths(zeroLoc Vector, mapData *Grid) int {
+func FindPaths(zeroLoc Vector, mapData *Grid) (int, int) {
 	frontier := make([]Vector, 0, 4)
+	ninesSet := make(map[Vector]bool)
 	nines := 0
 
 	frontier = append(frontier, zeroLoc)
@@ -110,12 +111,13 @@ func FindPaths(zeroLoc Vector, mapData *Grid) int {
 		for next := range mapData.Neighbours(current) {
 			frontier = append(frontier, next)
 			if mapData.Get(next) == 9 {
+				ninesSet[next] = true
 				nines++
 			}
 		}
 	}
 
-	return nines
+	return len(ninesSet), nines
 }
 
 func main() {
@@ -128,10 +130,13 @@ func main() {
 	reader := bufio.NewReader(file)
 	hikingMap := PopulateMapFromReader(reader)
 
-	totalPaths := 0
+	totalScore := 0
+	totalRating := 0
 	for _, z := range hikingMap.zeroes {
-		totalPaths += FindPaths(z, &hikingMap.grid)
+		score, rating := FindPaths(z, &hikingMap.grid)
+		totalScore += score
+		totalRating += rating
 	}
 
-	fmt.Printf("Total paths: %d\n", totalPaths)
+	fmt.Printf("Total Score: %d\nTotal Rating: %d\n", totalScore, totalRating)
 }
